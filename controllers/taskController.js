@@ -12,8 +12,8 @@ export const getTasks = async (req, res) => {
     const tasks = await Task.find(filter).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
+    console.error("❌ getTasks error:", err);
+    res.status(500).json({ message: "Failed to fetch tasks" });
   }
 };
 
@@ -23,18 +23,23 @@ export const getTasks = async (req, res) => {
 export const createTask = async (req, res) => {
   try {
     const { title, description, status, dueDate } = req.body;
-    const task = new Task({
+
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    const task = await Task.create({
       user: req.user._id,
       title,
       description,
-      status,
+      status: status || "Pending",
       dueDate,
     });
-    await task.save();
-    res.json(task);
+
+    res.status(201).json(task);
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
+    console.error("❌ createTask error:", err);
+    res.status(500).json({ message: "Failed to create task" });
   }
 };
 
@@ -43,25 +48,20 @@ export const createTask = async (req, res) => {
 // @access Private
 export const updateTask = async (req, res) => {
   try {
-    const task = await Task.findOne({
-      _id: req.params.id,
-      user: req.user._id,
-    });
+    const { title, description, status, dueDate } = req.body;
+
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
+      { $set: { title, description, status, dueDate } },
+      { new: true, runValidators: true }
+    );
 
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    const { title, description, status, dueDate } = req.body;
-
-    task.title = title ?? task.title;
-    task.description = description ?? task.description;
-    task.status = status ?? task.status;
-    task.dueDate = dueDate ?? task.dueDate;
-
-    await task.save();
     res.json(task);
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
+    console.error("❌ updateTask error:", err);
+    res.status(500).json({ message: "Failed to update task" });
   }
 };
 
@@ -79,7 +79,7 @@ export const deleteTask = async (req, res) => {
 
     res.json({ message: "Task removed" });
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
+    console.error("❌ deleteTask error:", err);
+    res.status(500).json({ message: "Failed to delete task" });
   }
 };

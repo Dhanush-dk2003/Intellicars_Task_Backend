@@ -17,6 +17,12 @@ app.use(cors({
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
+// Global error handler (last middleware)
+app.use((err, req, res, next) => {
+  console.error("❌ Unhandled error:", err.stack);
+  res.status(500).json({ message: "Something went wrong" });
+});
+
 
 const PORT = process.env.PORT;
 
